@@ -1,7 +1,7 @@
 import json
 import os
 
-PS_FOLDER = "/home/abhijeet_anand/Workspace/Patient Space/output"
+PS_FOLDER = "/home/abhijeet_anand/Workspace/N1-patient-space/output"
 
 def load_active_ps_benefits(member_id):
     """
