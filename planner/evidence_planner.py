@@ -72,14 +72,14 @@ def collect_rows_for_scenario(
     )
 
     # ----------------------------
-    # Params (ORDER MATTERS)
+    # PARAM
     # ----------------------------
     params = []
-    params.append(member_id)        # structured: member_id
-    params.extend(eb03_values)      # structured: EB03 IN (...)
-    params.extend(eb01_values)      # structured: EB01 IN (...)
-    params.append(q_eb03_fts)       # FTS EB03 terms
-    params.append(q_extracted_fts)  # FTS extracted terms
+    params.extend(eb03_values)
+    params.extend(eb01_values)
+    params.append(q_eb03_fts)
+    params.append(q_extracted_fts)
+    params.append(member_id)
 
     return query, params
 
@@ -125,14 +125,15 @@ def run_evidence_planner(member_id, atomic_questions, scenarios, scenario_rules)
             scenario_rules
         )
 
-        # rendered_query = cursor.mogrify(query, params).decode("utf-8")
-        # print("\n--- EXECUTING SQL ---")
-        # print(rendered_query)
-        # print("---------------------\n")
+        rendered_query = cursor.mogrify(query, params).decode("utf-8")
+        print("\n--- EXECUTING SQL ---")
+        print(rendered_query)
+        print("---------------------\n")
         
         cursor.execute(query, params)
         rows = cursor.fetchall()
         column_names = [desc[0] for desc in cursor.description]
+
 
         # scenario-specific EB01 requirement
         mandatory_eb = get_mandatory_eb(scenario_rules, scenario_id)

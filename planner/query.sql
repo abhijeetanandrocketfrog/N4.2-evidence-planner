@@ -2,8 +2,7 @@ WITH base AS (
     SELECT
         b.*,
         (
-            b.member_id = %s
-            AND b.data->>'EB03' IN ({eb03_placeholders})
+            b.data->>'EB03' IN ({eb03_placeholders})
             AND b.data->>'EB01' IN ({eb01_placeholders})
         ) AS structured_match,
 
@@ -23,6 +22,7 @@ WITH base AS (
             )
         ) AS fts_extracted_score
     FROM eb_blocks_v3 b
+    WHERE b.member_id = %s
 )
 SELECT *
 FROM base
