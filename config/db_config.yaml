@@ -1,0 +1,6 @@
+database:
+  host: database-t3-medium.c27sme4gw6sl.us-east-1.rds.amazonaws.com
+  dbname: pdc
+  user: postgres
+  password: dabsan-habxo5-Davjaq
+  port: 5432
