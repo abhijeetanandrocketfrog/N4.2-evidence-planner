@@ -75,12 +75,21 @@ def collect_rows_for_scenario(
     # PARAM
     # ----------------------------
     params = []
+    # 1: structured_match EB03
     params.extend(eb03_values)
+    # 2: structured_match EB01
     params.extend(eb01_values)
+    # 3: fts_eb03_score query
     params.append(q_eb03_fts)
+    # 4: fts_extracted_score query
     params.append(q_extracted_fts)
+    # 5: member_id
     params.append(member_id)
-
+    # 6: FTS guard EB01
+    params.extend(eb01_values)
+    # 7: FTS guard EB03
+    params.extend(eb03_values)
+    
     return query, params
 
 # ----------------------------

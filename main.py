@@ -4,7 +4,7 @@ from utils.scenario_rules import load_scenario_rules, expand_parent_scenarios
 from utils.helper import build_unique_eb_data
 import time
 
-member_id = "FAKE-1145539115_MIGUEL_TED_ANGLER"
+member_id = "FAKE-0756447708_GRETA_NICK_DACE"
 
 scenarios_input = {
     "scenarios": [1.1, 1.2]
@@ -20,7 +20,8 @@ atomic_questions_input = {
         "EB02: Individual and Children",
         "EB02: Individual and Spouse",
         "EB02: Individual Only",
-        "EB03: Dental Care"
+        "EB03: Dental Care",
+        "EB03: Private Duty Nursing"
       ],
       "extracted_terms": [
         "copay",
