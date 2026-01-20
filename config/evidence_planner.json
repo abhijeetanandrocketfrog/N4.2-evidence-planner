@@ -1,9 +1,44 @@
 {
   "1.1": {
     "description": "Co-Payment related questions",
+
+    "prior_check": {
+      "rules": [
+        {
+          "state": "non_covered",
+          "conditions": {
+            "EB01": ["Non-Covered"]
+          }
+        },
+        {
+          "state": "inactive",
+          "conditions": {
+            "EB01": [
+              "Inactive",
+              "Inactive - Pending Eligibility Update",
+              "Inactive - Pending Investigation"
+            ]
+          }
+        },
+        {
+          "state": "active",
+          "conditions": {
+            "EB01": [
+              "Active Coverage",
+              "Active - Full Risk Capitation",
+              "Active - Services Capitated",
+              "Active - Services Capitated to Primary Care Physician",
+              "Active - Pending Investigation"
+            ]
+          }
+        }
+      ]
+    },
+
     "mandatory_eb": {
       "EB01": ["Co-Payment"]
     },
+
     "fallback": {
       "EB01": ["Co-Payment"],
       "EB03": ["Health Benefit Plan Coverage"]
@@ -12,9 +47,44 @@
 
   "1.2": {
     "description": "Deductible related questions",
+
+    "prior_check": {
+      "rules": [
+        {
+          "state": "non_covered",
+          "conditions": {
+            "EB01": ["Non-Covered"]
+          }
+        },
+        {
+          "state": "inactive",
+          "conditions": {
+            "EB01": [
+              "Inactive",
+              "Inactive - Pending Eligibility Update",
+              "Inactive - Pending Investigation"
+            ]
+          }
+        },
+        {
+          "state": "active",
+          "conditions": {
+            "EB01": [
+              "Active Coverage",
+              "Active - Full Risk Capitation",
+              "Active - Services Capitated",
+              "Active - Services Capitated to Primary Care Physician",
+              "Active - Pending Investigation"
+            ]
+          }
+        }
+      ]
+    },
+
     "mandatory_eb": {
       "EB01": ["Deductible"]
     },
+
     "fallback": {
       "EB01": ["Deductible"],
       "EB03": ["Health Benefit Plan Coverage"]
@@ -23,9 +93,44 @@
 
   "1.3": {
     "description": "Out-of-Pocket Maximum related questions",
+
+    "prior_check": {
+      "rules": [
+        {
+          "state": "non_covered",
+          "conditions": {
+            "EB01": ["Non-Covered"]
+          }
+        },
+        {
+          "state": "inactive",
+          "conditions": {
+            "EB01": [
+              "Inactive",
+              "Inactive - Pending Eligibility Update",
+              "Inactive - Pending Investigation"
+            ]
+          }
+        },
+        {
+          "state": "active",
+          "conditions": {
+            "EB01": [
+              "Active Coverage",
+              "Active - Full Risk Capitation",
+              "Active - Services Capitated",
+              "Active - Services Capitated to Primary Care Physician",
+              "Active - Pending Investigation"
+            ]
+          }
+        }
+      ]
+    },
+
     "mandatory_eb": {
       "EB01": ["Out of Pocket (Stop Loss)"]
     },
+
     "fallback": {
       "EB01": ["Out of Pocket (Stop Loss)"],
       "EB03": ["Health Benefit Plan Coverage"]
@@ -34,9 +139,44 @@
 
   "1.4": {
     "description": "Co-Insurance related questions",
+
+    "prior_check": {
+      "rules": [
+        {
+          "state": "non_covered",
+          "conditions": {
+            "EB01": ["Non-Covered"]
+          }
+        },
+        {
+          "state": "inactive",
+          "conditions": {
+            "EB01": [
+              "Inactive",
+              "Inactive - Pending Eligibility Update",
+              "Inactive - Pending Investigation"
+            ]
+          }
+        },
+        {
+          "state": "active",
+          "conditions": {
+            "EB01": [
+              "Active Coverage",
+              "Active - Full Risk Capitation",
+              "Active - Services Capitated",
+              "Active - Services Capitated to Primary Care Physician",
+              "Active - Pending Investigation"
+            ]
+          }
+        }
+      ]
+    },
+
     "mandatory_eb": {
       "EB01": ["Co-Insurance"]
     },
+
     "fallback": {
       "EB01": ["Co-Insurance"],
       "EB03": ["Health Benefit Plan Coverage"]
@@ -45,13 +185,47 @@
 
   "1.5": {
     "description": "Benefit limitation related questions (usage-based limits)",
+
+    "prior_check": {
+      "rules": [
+        {
+          "state": "non_covered",
+          "conditions": {
+            "EB01": ["Non-Covered"]
+          }
+        },
+        {
+          "state": "inactive",
+          "conditions": {
+            "EB01": [
+              "Inactive",
+              "Inactive - Pending Eligibility Update",
+              "Inactive - Pending Investigation"
+            ]
+          }
+        },
+        {
+          "state": "active",
+          "conditions": {
+            "EB01": [
+              "Active Coverage",
+              "Active - Full Risk Capitation",
+              "Active - Services Capitated",
+              "Active - Services Capitated to Primary Care Physician",
+              "Active - Pending Investigation"
+            ]
+          }
+        }
+      ]
+    },
+
     "mandatory_eb": {
       "EB01": ["Limitations"]
     },
+
     "fallback": {
       "EB01": ["Limitations"],
       "EB03": ["Health Benefit Plan Coverage"]
     }
   }
-
 }

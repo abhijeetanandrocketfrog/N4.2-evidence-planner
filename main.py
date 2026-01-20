@@ -4,7 +4,7 @@ from utils.scenario_rules import load_scenario_rules, expand_parent_scenarios
 from utils.helper import build_unique_eb_data
 import time
 
-member_id = "FAKE-1035737865_ELIZABETH_ARIANNA_MUDSKIPPER"
+member_id = "FAKE-1145539115_MIGUEL_TED_ANGLER"
 
 scenarios_input = {
     "scenarios": [1.1, 1.2]
@@ -20,18 +20,12 @@ atomic_questions_input = {
         "EB02: Individual and Children",
         "EB02: Individual and Spouse",
         "EB02: Individual Only",
-        "EB03: Private Duty Nursing",
-        "EB03: Private Duty Nursing - Home",
-        "EB03: Private Duty Nursing - Inpatient",
-        "EB03: Professional (Physician) Visit - Skilled Nursing Facility",
-        "EB03: Skilled Nursing Care",
-        "EB03: Skilled Nursing Care - Room and Board"
+        "EB03: Dental Care"
       ],
       "extracted_terms": [
         "copay",
         "deductible",
-        "my",
-        "skilled nursing care"
+        "gyn"
       ]
     }
   ]
