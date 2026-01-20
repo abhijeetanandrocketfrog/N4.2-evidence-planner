@@ -7,7 +7,7 @@ import time
 member_id = "FAKE-0756447708_GRETA_NICK_DACE"
 
 scenarios_input = {
-    "scenarios": [1.1, 1.2]
+    "scenarios": [1.1]
 }
 
 atomic_questions_input = {
@@ -15,22 +15,23 @@ atomic_questions_input = {
     {
       "eb_filters": [
         "EB01: Co-Payment",
-        "EB01: Deductible",
         "EB02: Individual",
         "EB02: Individual and Children",
         "EB02: Individual and Spouse",
         "EB02: Individual Only",
-        "EB03: Dental Care",
-        "EB03: Private Duty Nursing"
+        "EB03: Gynecological",
+        "EB03: Obstetrical/Gynecological"
       ],
       "extracted_terms": [
         "copay",
-        "deductible",
-        "gyn"
+        "my",
+        "office visit",
+        "gyn routine check-up"
       ]
     }
   ]
 }
+
 
 # ----------------------------
 # Load Scenario Rules

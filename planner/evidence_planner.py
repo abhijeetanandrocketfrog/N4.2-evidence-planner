@@ -142,10 +142,6 @@ def fetch_prior_check_blocks(cursor, member_id, eb03_values, scenario_rules, sce
 
 
 def evaluate_prior_check(blocks, prior_check):
-    """
-    Determines whether mandatory EB logic should run for an EB03,
-    while preserving all prior-check blocks.
-    """
     rules = prior_check.get("rules", [])
 
     active_rules = [
@@ -153,7 +149,13 @@ def evaluate_prior_check(blocks, prior_check):
         if rule.get("state") == "active"
     ]
 
-    has_active = False
+    inactive_rules = [
+        rule for rule in rules
+        if rule.get("state") in ("inactive", "non_covered")
+    ]
+
+    explicit_active = False
+    explicit_inactive = False
 
     for block in blocks:
         for rule in active_rules:
@@ -161,16 +163,25 @@ def evaluate_prior_check(blocks, prior_check):
                 block.get(field) in allowed
                 for field, allowed in rule.get("conditions", {}).items()
             ):
-                has_active = True
+                explicit_active = True
                 break
-        if has_active:
-            break
+
+        for rule in inactive_rules:
+            if all(
+                block.get(field) in allowed
+                for field, allowed in rule.get("conditions", {}).items()
+            ):
+                explicit_inactive = True
+
+    # ✅ KEY FIX:
+    # If no explicit inactive/non-covered AND no explicit active,
+    # treat as ACTIVE
+    has_active = explicit_active or not explicit_inactive
 
     return {
         "has_active": has_active,
         "prior_blocks": blocks
     }
-
 
 # ----------------------------
 # Main planner: multi-scenario, grouped by EB03
@@ -188,10 +199,26 @@ def block_matches_fallback(block, fallback_rules):
 def run_evidence_planner(member_id, atomic_questions, scenarios, scenario_rules):
     eb03_values = extract_eb03_values(atomic_questions)
     if not eb03_values or not scenarios:
-        return []
+        return {}
 
     conn = get_db_connection()
     cursor = conn.cursor()
+
+    # --------------------------------------------------
+    # Collect query terms for annotation
+    # --------------------------------------------------
+    eb03_terms = [
+        f.replace("EB03:", "").strip()
+        for aq in atomic_questions
+        for f in aq.get("eb_filters", [])
+        if f.startswith("EB03:")
+    ]
+
+    extracted_terms = [
+        t
+        for aq in atomic_questions
+        for t in aq.get("extracted_terms", [])
+    ]
 
     # --------------------------------------------------
     # SQL CALL 1: PRIOR CHECK BLOCKS
@@ -205,18 +232,17 @@ def run_evidence_planner(member_id, atomic_questions, scenarios, scenario_rules)
     )
 
     # --------------------------------------------------
-    # Evaluate prior_check PER EB03 across ALL scenarios
+    # Evaluate "has_active" PER EB03 (across scenarios)
     # --------------------------------------------------
     eb03_status_map = {}
 
     for eb03 in eb03_values:
         blocks = prior_blocks_map.get(eb03, [])
-
         has_active = False
+
         for scenario_id in scenarios:
             prior_check = scenario_rules[str(scenario_id)]["prior_check"]
-            result = evaluate_prior_check(blocks, prior_check)
-            if result["has_active"]:
+            if evaluate_prior_check(blocks, prior_check)["has_active"]:
                 has_active = True
                 break
 
@@ -226,9 +252,9 @@ def run_evidence_planner(member_id, atomic_questions, scenarios, scenario_rules)
         }
 
     # --------------------------------------------------
-    # Prepare evidence map
+    # PRIMARY evidence (EB03 scoped)
     # --------------------------------------------------
-    evidence_map = {
+    primary_map = {
         eb03: {
             "rows": [],
             "seen_ids": set(),
@@ -237,33 +263,30 @@ def run_evidence_planner(member_id, atomic_questions, scenarios, scenario_rules)
         for eb03 in eb03_values
     }
 
-    # --------------------------------------------------
-    # ALWAYS store prior-check blocks (no filtering)
-    # --------------------------------------------------
+    # Always include prior-check blocks in primary evidence
     for eb03, status in eb03_status_map.items():
         for block in status["prior_blocks"]:
             block_id = block.get("id")
-            if block_id is None or block_id not in evidence_map[eb03]["seen_ids"]:
-                evidence_map[eb03]["rows"].append(block)
+            if block_id is None or block_id not in primary_map[eb03]["seen_ids"]:
+                primary_map[eb03]["rows"].append(block)
                 if block_id is not None:
-                    evidence_map[eb03]["seen_ids"].add(block_id)
+                    primary_map[eb03]["seen_ids"].add(block_id)
 
     # --------------------------------------------------
-    # SQL CALL 2: MANDATORY EB (only if EB03 is active OR no prior blocks)
+    # SQL CALL 2: Mandatory EB (ONLY if has_active or no prior data)
     # --------------------------------------------------
     for scenario_id in scenarios:
-        active_eb03s = [
-            eb03
-            for eb03, status in eb03_status_map.items()
+        eligible_eb03s = [
+            eb03 for eb03, status in eb03_status_map.items()
             if status["has_active"] or not status["prior_blocks"]
         ]
 
-        if not active_eb03s:
+        if not eligible_eb03s:
             continue
 
         query, params = collect_rows_for_scenario(
             member_id,
-            active_eb03s,
+            eligible_eb03s,
             atomic_questions,
             scenario_id,
             scenario_rules
@@ -285,37 +308,36 @@ def run_evidence_planner(member_id, atomic_questions, scenarios, scenario_rules)
 
         for row in rows:
             row_dict = dict(zip(column_names, row))
-            data_payload = row_dict.get("data")
-            if not data_payload:
+            data = row_dict.get("data")
+            if not data:
                 continue
 
-            eb03 = data_payload.get("EB03")
-            if eb03 not in active_eb03s:
+            eb03 = data.get("EB03")
+            if eb03 not in primary_map:
                 continue
 
-            block_id = data_payload.get("id")
+            block_id = data.get("id")
 
-            if block_id is None or block_id not in evidence_map[eb03]["seen_ids"]:
-                evidence_map[eb03]["rows"].append(data_payload)
+            if block_id is None or block_id not in primary_map[eb03]["seen_ids"]:
+                primary_map[eb03]["rows"].append(data)
                 if block_id is not None:
-                    evidence_map[eb03]["seen_ids"].add(block_id)
+                    primary_map[eb03]["seen_ids"].add(block_id)
 
-            if data_payload.get("EB01") in allowed_eb01:
-                evidence_map[eb03]["scenario_hits"].add(scenario_id)
+            if data.get("EB01") in allowed_eb01:
+                primary_map[eb03]["scenario_hits"].add(scenario_id)
 
     cursor.close()
     conn.close()
 
     # --------------------------------------------------
-    # FALLBACK (only when mandatory EB did NOT hit)
+    # FALLBACK (ONLY if mandatory EB not satisfied)
     # --------------------------------------------------
     ps_blocks = load_active_ps_benefits(member_id)
 
     if ps_blocks:
-        for eb03, data in evidence_map.items():
+        for eb03, data in primary_map.items():
             status = eb03_status_map.get(eb03)
 
-            # No active coverage AND prior blocks exist → no fallback
             if not status["has_active"] and status["prior_blocks"]:
                 continue
 
@@ -338,9 +360,61 @@ def run_evidence_planner(member_id, atomic_questions, scenarios, scenario_rules)
                             data["seen_ids"].add(block_id)
 
     # --------------------------------------------------
-    # Final output
+    # SECONDARY evidence (MSG / FTS only, GLOBAL)
     # --------------------------------------------------
-    return [
-        {"eb03": eb03, "rows": data["rows"]}
-        for eb03, data in evidence_map.items()
-    ]
+    secondary_rows = []
+    seen_secondary_ids = set()
+
+    for scenario_id in scenarios:
+        query, params = collect_rows_for_scenario(
+            member_id,
+            eb03_values,
+            atomic_questions,
+            scenario_id,
+            scenario_rules
+        )
+
+        cursor = get_db_connection().cursor()
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        column_names = [desc[0] for desc in cursor.description]
+
+        for row in rows:
+            row_dict = dict(zip(column_names, row))
+            data = row_dict.get("data")
+            if not data:
+                continue
+
+            block_id = data.get("id")
+            if block_id in seen_secondary_ids:
+                continue
+
+            eb03 = data.get("EB03")
+            if eb03 in primary_map and block_id in primary_map[eb03]["seen_ids"]:
+                continue  # already primary
+
+            secondary_rows.append(data)
+            if block_id is not None:
+                seen_secondary_ids.add(block_id)
+
+        cursor.close()
+
+    # --------------------------------------------------
+    # FINAL OUTPUT
+    # --------------------------------------------------
+    return {
+        "primary_evidence": [
+            {
+                "eb03": eb03,
+                "rows": data["rows"]
+            }
+            for eb03, data in primary_map.items()
+        ],
+        "secondary_evidence": {
+            "rows": secondary_rows,
+            "matched_terms": {
+                "eb03_terms": eb03_terms,
+                "extracted_terms": extracted_terms
+            }
+        }
+    }
