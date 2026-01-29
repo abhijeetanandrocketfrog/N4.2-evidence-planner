@@ -35,7 +35,7 @@
       ]
     },
 
-    "mandatory_eb": {
+    "mandatory": {
       "EB01": ["Co-Payment"]
     },
 
@@ -81,7 +81,7 @@
       ]
     },
 
-    "mandatory_eb": {
+    "mandatory": {
       "EB01": ["Deductible"]
     },
 
@@ -127,7 +127,7 @@
       ]
     },
 
-    "mandatory_eb": {
+    "mandatory": {
       "EB01": ["Out of Pocket (Stop Loss)"]
     },
 
@@ -173,7 +173,7 @@
       ]
     },
 
-    "mandatory_eb": {
+    "mandatory": {
       "EB01": ["Co-Insurance"]
     },
 
@@ -219,7 +219,7 @@
       ]
     },
 
-    "mandatory_eb": {
+    "mandatory": {
       "EB01": ["Limitations"]
     },
 
@@ -227,5 +227,60 @@
       "EB01": ["Limitations"],
       "EB03": ["Health Benefit Plan Coverage"]
     }
+  },
+  "2.1": {
+    "description": "Plan-level coverage questions (identifiers, type, dates not tied to a service)",
+
+    "prior_check": {},
+
+    "mandatory": {
+      "SEGMENTS": ["DTP", "REF"]
+    },
+
+    "fallback": {
+      "EB03": ["Health Benefit Plan Coverage"]
+    }
+  },
+
+  "2.2": {
+    "description": "Service-level coverage questions (identifiers or dates tied to a specific service)",
+
+    "prior_check": {
+      "rules": [
+        {
+          "state": "non_covered",
+          "conditions": {
+            "EB01": ["Non-Covered"]
+          }
+        },
+        {
+          "state": "inactive",
+          "conditions": {
+            "EB01": [
+              "Inactive",
+              "Inactive - Pending Eligibility Update",
+              "Inactive - Pending Investigation"
+            ]
+          }
+        },
+        {
+          "state": "active",
+          "conditions": {
+            "EB01": [
+              "Active Coverage",
+              "Active - Full Risk Capitation",
+              "Active - Services Capitated",
+              "Active - Services Capitated to Primary Care Physician",
+              "Active - Pending Investigation"
+            ]
+          }
+        }
+      ]
+    },
+
+    "mandatory": {},
+
+    "fallback": {}
   }
+
 }

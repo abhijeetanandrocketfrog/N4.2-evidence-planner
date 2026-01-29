@@ -6,9 +6,9 @@ def load_scenario_rules():
     with open(SCENARIO_RULES_PATH, "r") as f:
         return json.load(f)
 
-def get_mandatory_eb(scenario_rules, scenario_id):
+def get_mandatory(scenario_rules, scenario_id):
     scenario_cfg = scenario_rules.get(str(scenario_id), {})
-    return scenario_cfg.get("mandatory_eb", {})
+    return scenario_cfg.get("mandatory", {})
 
 def get_fallback_rules(scenario_rules, scenario_id):
     scenario_cfg = scenario_rules.get(str(scenario_id), {})
@@ -37,3 +37,42 @@ def expand_parent_scenarios(scenarios, scenario_rules):
             expanded.add(float(scenario))
 
     return sorted(expanded)
+
+
+def load_plan_level_fallback_blocks(cursor, member_id, fallback_rules):
+    """
+    Generic plan-level fallback based on scenario_rules JSON.
+    Looks for EB blocks where EB03 matches fallback rules
+    and required segments are present.
+    """
+
+    eb03_values = fallback_rules.get("EB03", [])
+    if not eb03_values:
+        return []
+
+    placeholders = ", ".join(["%s"] * len(eb03_values))
+
+    query = f"""
+        SELECT data
+        FROM eb_blocks_v3
+        WHERE member_id = %s
+          AND data->>'EB03' IN ({placeholders});
+    """
+
+    params = [member_id] + eb03_values
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+
+    result = []
+    for (data,) in rows:
+        if not data:
+            continue
+
+        # Check for presence of plan segments dynamically
+        has_ref = bool(data.get("REF"))
+        has_dtp = bool(data.get("DTP"))
+
+        if has_ref or has_dtp:
+            result.append(data)
+
+    return result

@@ -4,7 +4,7 @@ from utils.scenario_rules import load_scenario_rules, expand_parent_scenarios
 from utils.helper import build_unique_eb_data
 import time
 
-member_id = "FAKE-0756447708_GRETA_NICK_DACE"
+member_id = "FAKE-1430569713_GRETA_TOMMY_SQUAWFISH"
 
 scenarios_input = {
     "scenarios": [1.1]
@@ -12,25 +12,27 @@ scenarios_input = {
 
 atomic_questions_input = {
   "Atomic_Questions": [
-    {
-      "eb_filters": [
-        "EB01: Co-Payment",
-        "EB02: Individual",
-        "EB02: Individual and Children",
-        "EB02: Individual and Spouse",
-        "EB02: Individual Only",
-        "EB03: Gynecological",
-        "EB03: Obstetrical/Gynecological"
-      ],
-      "extracted_terms": [
-        "copay",
-        "my",
-        "office visit",
-        "gyn routine check-up"
-      ]
-    }
-  ]
+  {
+    "eb_filters": [
+      "EB01: Co-Payment",
+      "EB02: Individual",
+      "EB02: Individual and Children",
+      "EB02: Individual and Spouse",
+      "EB02: Individual Only",
+      "EB03: Health Benefit Plan Coverage",
+      "EB12: In-Plan-Network"
+    ],
+    "extracted_terms": [
+      "copay",
+      "i",
+      "gyn",
+      "in-network"
+    ]
+  }
+]
 }
+
+
 
 
 # ----------------------------
@@ -46,14 +48,14 @@ expanded_scenarios = expand_parent_scenarios(
     raw_scenarios,
     scenario_rules
 )
-
+print(expanded_scenarios)
 # ----------------------------
 # Run Evidence Planner (multi-scenario)
 # ----------------------------
 evidence = run_evidence_planner(
     member_id=member_id,
     atomic_questions=atomic_questions_input["Atomic_Questions"],
-    scenarios=scenarios_input["scenarios"],
+    scenarios=expanded_scenarios,
     scenario_rules=scenario_rules
 )
 
