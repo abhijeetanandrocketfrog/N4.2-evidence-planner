@@ -4,10 +4,10 @@ from utils.scenario_rules import load_scenario_rules, expand_parent_scenarios
 from utils.helper import build_unique_eb_data
 import time
 
-member_id = "FAKE-1430569713_GRETA_TOMMY_SQUAWFISH"
+member_id = "FAKE-0595433777_KRIS_OLIVIA_AYU"
 
 scenarios_input = {
-    "scenarios": [2.1]
+    "scenarios": [2.2]
 }
 
 atomic_questions_input = {
@@ -19,7 +19,7 @@ atomic_questions_input = {
       "EB02: Individual and Children",
       "EB02: Individual and Spouse",
       "EB02: Individual Only",
-      "EB03: Health Benefit Plan Coverage",
+      "EB03: Chiropractic",
       "EB12: In-Plan-Network"
     ],
     "extracted_terms": [

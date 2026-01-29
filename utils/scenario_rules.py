@@ -76,3 +76,31 @@ def load_plan_level_fallback_blocks(cursor, member_id, fallback_rules):
             result.append(data)
 
     return result
+
+def collect_service_segments_for_eb03(cursor, member_id, eb03_value, segments):
+    """
+    Used for service-scope scenarios where mandatory = SEGMENTS.
+    Fetch blocks for that EB03 and return ones having required segments.
+    """
+
+    query = """
+        SELECT data
+        FROM eb_blocks_v3
+        WHERE member_id = %s
+          AND data->>'EB03' = %s;
+    """
+
+    cursor.execute(query, [member_id, eb03_value])
+    rows = cursor.fetchall()
+
+    result = []
+
+    for (data,) in rows:
+        if not data:
+            continue
+
+        # keep block if it has ANY of required segments
+        if any(data.get(seg) for seg in segments):
+            result.append(data)
+
+    return result

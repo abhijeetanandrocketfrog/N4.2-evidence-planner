@@ -1,5 +1,5 @@
 from utils.db import get_db_connection
-from utils.scenario_rules import get_mandatory, get_fallback_rules, load_plan_level_fallback_blocks
+from utils.scenario_rules import get_mandatory, get_fallback_rules, load_plan_level_fallback_blocks, collect_service_segments_for_eb03
 from utils.ps_loader import load_active_ps_benefits, load_patient_space_segments
 from utils.sql_loader import load_sql
 
@@ -215,19 +215,18 @@ def block_matches_fallback(block, fallback_rules):
 
 def run_evidence_planner(member_id, atomic_questions, scenarios, scenario_rules):
     # --------------------------------------------------
-    # Find Plan Level Scenarios
+    # Identify Plan-Level Scenarios dynamically
     # --------------------------------------------------
     PLAN_LEVEL_SCENARIOS = {
         float(sid)
         for sid, rule in scenario_rules.items()
         if rule.get("scope") == "plan"
     }
-    print("PLAN -", PLAN_LEVEL_SCENARIOS)
+
     eb03_values = extract_eb03_values(atomic_questions)
-    if not eb03_values or not scenarios:
+    if not scenarios:
         return {}
 
-    # Phase 1: Scope extraction (currently EB03)
     scope_keys = list(eb03_values)
 
     if any(s in PLAN_LEVEL_SCENARIOS for s in scenarios):
@@ -237,7 +236,7 @@ def run_evidence_planner(member_id, atomic_questions, scenarios, scenario_rules)
     cursor = conn.cursor()
 
     # --------------------------------------------------
-    # Collect query terms for annotation
+    # Terms for annotation
     # --------------------------------------------------
     eb03_terms = [
         f.replace("EB03:", "").strip()
@@ -253,7 +252,7 @@ def run_evidence_planner(member_id, atomic_questions, scenarios, scenario_rules)
     ]
 
     # --------------------------------------------------
-    # SQL CALL 1: PRIOR CHECK BLOCKS
+    # PRIOR CHECK BLOCKS
     # --------------------------------------------------
     prior_blocks_map = fetch_prior_check_blocks(
         cursor,
@@ -264,7 +263,7 @@ def run_evidence_planner(member_id, atomic_questions, scenarios, scenario_rules)
     )
 
     # --------------------------------------------------
-    # Evaluate "has_active" PER EB03 (across scenarios)
+    # Evaluate active/inactive per EB03
     # --------------------------------------------------
     scope_status_map = {}
 
@@ -280,7 +279,7 @@ def run_evidence_planner(member_id, atomic_questions, scenarios, scenario_rules)
         has_active = False
 
         for scenario_id in scenarios:
-            prior_check = scenario_rules[str(scenario_id)]["prior_check"]
+            prior_check = scenario_rules[str(scenario_id)].get("prior_check", {})
             if evaluate_prior_check(blocks, prior_check)["has_active"]:
                 has_active = True
                 break
@@ -291,7 +290,7 @@ def run_evidence_planner(member_id, atomic_questions, scenarios, scenario_rules)
         }
 
     # --------------------------------------------------
-    # PRIMARY evidence (EB03 scoped)
+    # PRIMARY MAP INIT
     # --------------------------------------------------
     primary_map = {
         scope_key: {
@@ -302,20 +301,22 @@ def run_evidence_planner(member_id, atomic_questions, scenarios, scenario_rules)
         for scope_key in scope_keys
     }
 
-    # Always include prior-check blocks in primary evidence
+    # Add prior blocks
     for scope_key, status in scope_status_map.items():
         for block in status["prior_blocks"]:
             block_id = block.get("id")
-            if block_id is None or block_id not in primary_map[scope_key]["seen_ids"]:
+            if block_id not in primary_map[scope_key]["seen_ids"]:
                 primary_map[scope_key]["rows"].append(block)
-                if block_id is not None:
+                if block_id:
                     primary_map[scope_key]["seen_ids"].add(block_id)
 
-
     # --------------------------------------------------
-    # SQL CALL 2: Mandatory EB (ONLY if has_active or no prior data)
+    # MANDATORY / SEGMENT / SQL LOGIC
     # --------------------------------------------------
     for scenario_id in scenarios:
+
+        scenario_rule = scenario_rules[str(scenario_id)]
+
         eligible_scope_keys = [
             scope_key for scope_key, status in scope_status_map.items()
             if status["has_active"] or not status["prior_blocks"]
@@ -324,6 +325,53 @@ def run_evidence_planner(member_id, atomic_questions, scenarios, scenario_rules)
         if not eligible_scope_keys:
             continue
 
+        # -------- PLAN SCOPE --------
+        if scenario_rule.get("scope") == "plan":
+            result = collect_rows_for_scenario(
+                member_id, [], atomic_questions, scenario_id, scenario_rules
+            )
+
+            if result and result[0] == "PLAN_LEVEL":
+                ps_data = result[1]
+                if ps_data:
+                    primary_map["PLAN_LEVEL"]["rows"].append(ps_data)
+                    primary_map["PLAN_LEVEL"]["scenario_hits"].add(scenario_id)
+
+            continue
+
+        # -------- SERVICE SEGMENTS (2.2 type) --------
+        if (
+            scenario_rule.get("scope") == "service"
+            and "SEGMENTS" in scenario_rule.get("mandatory", {})
+        ):
+            segments = scenario_rule["mandatory"]["SEGMENTS"]
+
+            for scope_key in eligible_scope_keys:
+                if scope_key == "PLAN_LEVEL":
+                    continue
+
+                if not scope_status_map[scope_key]["has_active"]:
+                    continue
+
+                segment_blocks = collect_service_segments_for_eb03(
+                    cursor,
+                    member_id,
+                    scope_key,
+                    segments
+                )
+
+                for block in segment_blocks:
+                    block_id = block.get("id")
+                    if block_id not in primary_map[scope_key]["seen_ids"]:
+                        primary_map[scope_key]["rows"].append(block)
+                        if block_id:
+                            primary_map[scope_key]["seen_ids"].add(block_id)
+
+                primary_map[scope_key]["scenario_hits"].add(scenario_id)
+
+            continue
+
+        # -------- NORMAL SQL (existing logic) --------
         service_scope_keys = [k for k in eligible_scope_keys if k != "PLAN_LEVEL"]
 
         result = collect_rows_for_scenario(
@@ -334,29 +382,14 @@ def run_evidence_planner(member_id, atomic_questions, scenarios, scenario_rules)
             scenario_rules
         )
 
-        # PLAN LEVEL result
-        if result and result[0] == "PLAN_LEVEL":
-            ps_data = result[1]
-
-            # ADD THIS CHECK
-            if ps_data:   # only if REF/DTP actually found
-                primary_map["PLAN_LEVEL"]["rows"].append(ps_data)
-                primary_map["PLAN_LEVEL"]["scenario_hits"].add(scenario_id)
-
+        if not result:
             continue
+
         query, params = result
-        if query == "PLAN_LEVEL" or not query:
+        if not query:
             continue
 
         cursor.execute(query, params)
-
-
-        # print("\n================ EXECUTING SQL ================\n")
-        # rendered_query = cursor.mogrify(query, params).decode("utf-8")
-        # print(rendered_query)
-        # print("\n==============================================\n")
-
-
         rows = cursor.fetchall()
         column_names = [desc[0] for desc in cursor.description]
 
@@ -374,10 +407,9 @@ def run_evidence_planner(member_id, atomic_questions, scenarios, scenario_rules)
                 continue
 
             block_id = data.get("id")
-
-            if block_id is None or block_id not in primary_map[scope_key]["seen_ids"]:
+            if block_id not in primary_map[scope_key]["seen_ids"]:
                 primary_map[scope_key]["rows"].append(data)
-                if block_id is not None:
+                if block_id:
                     primary_map[scope_key]["seen_ids"].add(block_id)
 
             if data.get("EB01") in allowed_eb01:
@@ -389,6 +421,7 @@ def run_evidence_planner(member_id, atomic_questions, scenarios, scenario_rules)
     # --------------------------------------------------
     # FALLBACK (ONLY if mandatory EB not satisfied)
     # --------------------------------------------------
+
     # ---------------- PLAN LEVEL FALLBACK (separate from service fallback) ----------------
     if "PLAN_LEVEL" in primary_map:
         for scenario_id in scenarios:
