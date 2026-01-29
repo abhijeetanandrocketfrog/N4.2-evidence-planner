@@ -1,7 +1,7 @@
 {
   "1.1": {
     "description": "Co-Payment related questions",
-
+    "scope": "service",
     "prior_check": {
       "rules": [
         {
@@ -47,7 +47,7 @@
 
   "1.2": {
     "description": "Deductible related questions",
-
+    "scope": "service",
     "prior_check": {
       "rules": [
         {
@@ -93,7 +93,7 @@
 
   "1.3": {
     "description": "Out-of-Pocket Maximum related questions",
-
+    "scope": "service",
     "prior_check": {
       "rules": [
         {
@@ -139,7 +139,7 @@
 
   "1.4": {
     "description": "Co-Insurance related questions",
-
+    "scope": "service",
     "prior_check": {
       "rules": [
         {
@@ -185,7 +185,7 @@
 
   "1.5": {
     "description": "Benefit limitation related questions (usage-based limits)",
-
+    "scope": "service",
     "prior_check": {
       "rules": [
         {
@@ -230,7 +230,7 @@
   },
   "2.1": {
     "description": "Plan-level coverage questions (identifiers, type, dates not tied to a service)",
-
+    "scope": "plan",
     "prior_check": {},
 
     "mandatory": {
@@ -244,7 +244,7 @@
 
   "2.2": {
     "description": "Service-level coverage questions (identifiers or dates tied to a specific service)",
-
+    "scope": "service",
     "prior_check": {
       "rules": [
         {
@@ -278,7 +278,9 @@
       ]
     },
 
-    "mandatory": {},
+    "mandatory": {
+      "SEGMENTS": ["DTP", "REF"]
+    },
 
     "fallback": {}
   }

@@ -7,7 +7,7 @@ import time
 member_id = "FAKE-1430569713_GRETA_TOMMY_SQUAWFISH"
 
 scenarios_input = {
-    "scenarios": [1.1]
+    "scenarios": [2.1]
 }
 
 atomic_questions_input = {

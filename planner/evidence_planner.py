@@ -4,8 +4,6 @@ from utils.ps_loader import load_active_ps_benefits, load_patient_space_segments
 from utils.sql_loader import load_sql
 
 
-PLAN_LEVEL_SCENARIOS = {2.1}
-
 # ----------------------------
 # Helper: extract EB03 values
 # ----------------------------
@@ -92,7 +90,9 @@ def collect_rows_for_scenario(
     scenario_id,
     scenario_rules
 ):
-    if scenario_id in PLAN_LEVEL_SCENARIOS:
+    scenario_rule = scenario_rules[str(scenario_id)]
+
+    if scenario_rule.get("scope") == "plan":
         ps_data = collect_plan_level_rows(
             member_id,
             scenario_id,
@@ -107,6 +107,7 @@ def collect_rows_for_scenario(
         scenario_id,
         scenario_rules
     )
+
 
 
 # ----------------------------
@@ -213,6 +214,15 @@ def block_matches_fallback(block, fallback_rules):
     return True
 
 def run_evidence_planner(member_id, atomic_questions, scenarios, scenario_rules):
+    # --------------------------------------------------
+    # Find Plan Level Scenarios
+    # --------------------------------------------------
+    PLAN_LEVEL_SCENARIOS = {
+        float(sid)
+        for sid, rule in scenario_rules.items()
+        if rule.get("scope") == "plan"
+    }
+    print("PLAN -", PLAN_LEVEL_SCENARIOS)
     eb03_values = extract_eb03_values(atomic_questions)
     if not eb03_values or not scenarios:
         return {}
