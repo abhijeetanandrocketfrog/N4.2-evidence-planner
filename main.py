@@ -4,10 +4,10 @@ from utils.scenario_rules import load_scenario_rules, expand_parent_scenarios
 from utils.helper import build_unique_eb_data
 import time
 
-member_id = "FAKE-0595433777_KRIS_OLIVIA_AYU"
+member_id = "FAKE-0049112942_NANCY_JENNIFER_SHARKSUCKER"
 
 scenarios_input = {
-    "scenarios": [2.2]
+    "scenarios": [1.1, 2.2, 2.1]
 }
 
 atomic_questions_input = {

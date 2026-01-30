@@ -455,21 +455,48 @@ def run_evidence_planner(member_id, atomic_questions, scenarios, scenario_rules)
             conn.close()
     ps_blocks = load_active_ps_benefits(member_id)
 
-    if ps_blocks:
-        for scope_key, data in primary_map.items():
-            status = scope_status_map.get(
-                scope_key,
-                {"has_active": True, "prior_blocks": []}
-            )
-            if not status["has_active"] and status["prior_blocks"]:
+    for scenario_id in scenarios:
+
+        scenario_rule = scenario_rules[str(scenario_id)]
+        scenario_scope = scenario_rule.get("scope")
+
+        fallback_rules = get_fallback_rules(scenario_rules, scenario_id)
+        if not fallback_rules:
+            continue
+
+        # ---------------- PLAN SCENARIO FALLBACK ----------------
+        if scenario_scope == "plan":
+            if scenario_id in primary_map["PLAN_LEVEL"]["scenario_hits"]:
                 continue
 
-            for scenario_id in scenarios:
-                if scenario_id in data["scenario_hits"]:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+
+            plan_blocks = load_plan_level_fallback_blocks(
+                cursor,
+                member_id,
+                fallback_rules
+            )
+
+            for block in plan_blocks:
+                block_id = block.get("id")
+                if block_id not in primary_map["PLAN_LEVEL"]["seen_ids"]:
+                    primary_map["PLAN_LEVEL"]["rows"].append(block)
+                    if block_id:
+                        primary_map["PLAN_LEVEL"]["seen_ids"].add(block_id)
+
+            cursor.close()
+            conn.close()
+
+        # ---------------- SERVICE SCENARIO FALLBACK ----------------
+        elif scenario_scope == "service":
+            for scope_key in primary_map:
+                if scope_key == "PLAN_LEVEL":
                     continue
 
-                fallback_rules = get_fallback_rules(scenario_rules, scenario_id)
-                if not fallback_rules:
+                data = primary_map[scope_key]
+
+                if scenario_id in data["scenario_hits"]:
                     continue
 
                 for block in ps_blocks:
@@ -477,9 +504,9 @@ def run_evidence_planner(member_id, atomic_questions, scenarios, scenario_rules)
                         continue
 
                     block_id = block.get("id")
-                    if block_id is None or block_id not in data["seen_ids"]:
+                    if block_id not in data["seen_ids"]:
                         data["rows"].append(block)
-                        if block_id is not None:
+                        if block_id:
                             data["seen_ids"].add(block_id)
 
     # --------------------------------------------------
