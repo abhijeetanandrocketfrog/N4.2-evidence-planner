@@ -213,6 +213,7 @@ def block_matches_fallback(block, fallback_rules):
             return False
     return True
 
+
 def run_evidence_planner(member_id, atomic_questions, scenarios, scenario_rules):
     # --------------------------------------------------
     # Identify Plan-Level Scenarios dynamically
@@ -405,6 +406,14 @@ def run_evidence_planner(member_id, atomic_questions, scenarios, scenario_rules)
             scope_key = data.get("EB03")
             if scope_key not in primary_map:
                 continue
+            if not data.get("_structured_match"):
+                continue
+
+            data["_structured_match"] = row_dict.get("structured_match")
+            data["_fts_score"] = (
+                (row_dict.get("fts_eb03_score") or 0) +
+                (row_dict.get("fts_extracted_score") or 0)
+            )
 
             block_id = data.get("id")
             if block_id not in primary_map[scope_key]["seen_ids"]:
@@ -543,6 +552,14 @@ def run_evidence_planner(member_id, atomic_questions, scenarios, scenario_rules)
             row_dict = dict(zip(column_names, row))
             data = row_dict.get("data")
             if not data:
+                continue
+
+            data["_structured_match"] = row_dict.get("structured_match")
+            data["_fts_score"] = (
+                (row_dict.get("fts_eb03_score") or 0) +
+                (row_dict.get("fts_extracted_score") or 0)
+            )
+            if data.get("_structured_match"):
                 continue
 
             block_id = data.get("id")

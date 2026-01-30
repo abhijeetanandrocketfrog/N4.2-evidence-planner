@@ -2,6 +2,11 @@ import json
 import hashlib
 
 
+def clean_block(block):
+    block.pop("_structured_match", None)
+    block.pop("_fts_score", None)
+    return block
+
 def get_plan_block_signature(row):
     """
     Create a stable signature for PLAN_LEVEL blocks based only
@@ -62,13 +67,13 @@ def build_unique_eb_data(input_path, output_path):
                 if block_id in seen_ids:
                     continue
                 seen_ids.add(block_id)
-                unique_blocks.append(row)
+                unique_blocks.append(clean_block(row.copy()))
             else:
                 row_hash = get_row_hash(row)
                 if row_hash in seen_hashes:
                     continue
                 seen_hashes.add(row_hash)
-                unique_blocks.append(row)
+                unique_blocks.append(clean_block(row.copy()))
 
     print(f"[DEBUG] Primary evidence processed")
 
@@ -84,13 +89,13 @@ def build_unique_eb_data(input_path, output_path):
             if block_id in seen_ids:
                 continue
             seen_ids.add(block_id)
-            unique_blocks.append(row)
+            unique_blocks.append(clean_block(row.copy()))
         else:
             row_hash = get_row_hash(row)
             if row_hash in seen_hashes:
                 continue
             seen_hashes.add(row_hash)
-            unique_blocks.append(row)
+            unique_blocks.append(clean_block(row.copy()))
 
     # --------------------------------------------------
     # Final stats
