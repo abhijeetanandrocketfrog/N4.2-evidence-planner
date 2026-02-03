@@ -1,88 +1,76 @@
-import json
-from planner.evidence_planner import run_evidence_planner
-from utils.scenario_rules import load_scenario_rules, expand_parent_scenarios
-from utils.helper import build_unique_eb_data
-import time
+from core.evidence_engine import EvidenceEngine
+from utils.helper import (
+    get_db_connection,
+    parse_atomic_questions,
+    pretty_print,
+    dump_unique_eb_blocks,
+)
+import yaml
 
-member_id = "FAKE-0001792746_JAMIE_NICK_FEATHERBACK"
-# 0595433777_KRIS_OLIVIA_AYU
-scenarios_input = {
-    "scenarios": [1.1, 2.2, 2.1]
-}
 
-atomic_questions_input = {
-  "Atomic_Questions": [
-  {
-    "eb_filters": [
-      "EB01: Co-Payment",
-      "EB02: Individual",
-      "EB02: Individual and Children",
-      "EB02: Individual and Spouse",
-      "EB02: Individual Only",
-      "EB03: Chiropractic",
-      "EB12: In-Plan-Network"
-    ],
-    "extracted_terms": [
-      "copay",
-      "i",
-      "gyn",
-      "in-network"
+def main():
+    member_id = "FAKE-1243781181_ALEX_ELIZABETH_BUTTERFISH"
+    scenarios = ["1.2"]
+
+    atomic_questions_input = {
+    "Atomic_Questions": [
+        {
+            "eb_filters": [
+            "EB01: Deductible",
+            "EB02: Individual",
+            "EB02: Individual and Children",
+            "EB02: Individual and Spouse",
+            "EB02: Individual Only",
+            "EB03: Audiology Exam",
+            "EB03: Consultation",
+            "EB03: Diagnostic Lab",
+            "EB03: Diagnostic Medical",
+            "EB03: Independent Medical Evaluation",
+            "EB03: Infertility",
+            "EB03: Invasive Procedures",
+            "EB03: Oncology",
+            "EB03: Pathology",
+            "EB03: Physical Therapy",
+            "EB03: Professional (Physician)",
+            "EB03: Pulmonary",
+            "EB03: Screening laboratory",
+            "EB03: Surgical Benefits - Professional (Physician)"
+            ],
+            "extracted_terms": [
+            "deductible",
+            "my",
+            "pcp",
+            "specialist",
+            "genetic testing"
+            ]
+        }
     ]
-  }
-]
-}
+    }
 
 
+    eb03_terms, extracted_terms = parse_atomic_questions(atomic_questions_input)
+
+    conn = get_db_connection()
+
+    with open("config/config.yaml") as f:
+        config = yaml.safe_load(f)
+
+    engine = EvidenceEngine(
+        conn,
+        config["paths"]["dsl"],
+        config["paths"]["fts_sql"]
+    )
+
+    result = engine.run(
+        member_id,
+        scenarios,
+        eb03_terms,
+        extracted_terms
+    )
+
+    pretty_print(result)
+    dump_unique_eb_blocks(result)
 
 
-# ----------------------------
-# Load Scenario Rules
-# ----------------------------
-start_time = time.perf_counter()
-
-scenario_rules = load_scenario_rules()
-
-raw_scenarios = scenarios_input["scenarios"]
-
-expanded_scenarios = expand_parent_scenarios(
-    raw_scenarios,
-    scenario_rules
-)
-print(expanded_scenarios)
-# ----------------------------
-# Run Evidence Planner (multi-scenario)
-# ----------------------------
-evidence = run_evidence_planner(
-    member_id=member_id,
-    atomic_questions=atomic_questions_input["Atomic_Questions"],
-    scenarios=expanded_scenarios,
-    scenario_rules=scenario_rules
-)
-
-end_time = time.perf_counter()
-time_taken = end_time - start_time
-
-print(f"Time Taken : {time_taken:.6f} seconds")
-
-# ----------------------------
-# Final Output
-# ----------------------------
-output = {
-    "member_id": member_id,
-    "evidence": evidence
-}
-
-# ----------------------------
-# Store Output
-# ----------------------------
-output_path = "outputs/output.json"
-
-with open(output_path, "w") as f:
-    json.dump(output, f, indent=2, default=str)
-
-build_unique_eb_data(
-    input_path="outputs/output.json",
-    output_path="outputs/eb_data.json"
-)
-
-print(f"Evidence planner output stored at {output_path}")
+if __name__ == "__main__":
+    main()

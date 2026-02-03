@@ -1,3 +1,4 @@
 # Ignore Python cache
 __pycache__/
-outputs/
+output/
+*.log

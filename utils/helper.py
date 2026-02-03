@@ -1,109 +1,102 @@
 import json
-import hashlib
+import yaml
+import psycopg2
 
 
-def clean_block(block):
-    block.pop("_structured_match", None)
-    block.pop("_fts_score", None)
-    return block
+# ---------------- DB CONNECTION ----------------
+def get_db_connection(config_path="config/config.yaml"):
+    with open(config_path) as f:
+        cfg = yaml.safe_load(f)
 
-def get_plan_block_signature(row):
-    """
-    Create a stable signature for PLAN_LEVEL blocks based only
-    on REF and DTP segments (order-independent).
-    """
-    ref = row.get("REF", [])
-    dtp = row.get("DTP", [])
+    db = cfg["database"]
 
-    ref_sig = sorted(json.dumps(r, sort_keys=True) for r in ref)
-    dtp_sig = sorted(json.dumps(d, sort_keys=True) for d in dtp)
-
-    return hashlib.md5(
-        json.dumps({"REF": ref_sig, "DTP": dtp_sig}).encode()
-    ).hexdigest()
+    conn = psycopg2.connect(
+        host=db["host"],
+        dbname=db["dbname"],
+        user=db["user"],
+        password=db["password"],
+        port=db["port"],
+    )
+    return conn
 
 
-def get_row_hash(row):
-    """
-    Generic row hash.
-    Uses special signature for PLAN blocks,
-    normal hash for EB blocks without id.
-    """
-    if "REF" in row or "DTP" in row:
-        return get_plan_block_signature(row)
+# ---------------- ATOMIC PARSER ----------------
+def parse_atomic_questions(aq_input):
+    eb03_terms = []
+    extracted_terms = []
 
-    return hashlib.md5(
-        json.dumps(row, sort_keys=True).encode()
-    ).hexdigest()
+    aq = aq_input["Atomic_Questions"][0]
+
+    for item in aq["eb_filters"]:
+        if item.startswith("EB03:"):
+            eb03_terms.append(item.split("EB03:")[1].strip())
+
+    extracted_terms = aq.get("extracted_terms", [])
+
+    return eb03_terms, extracted_terms
 
 
-def build_unique_eb_data(input_path, output_path):
-    """
-    Reads output.json (planner format) and writes a deduplicated
-    eb_data.json containing ALL unique EB/PLAN blocks
-    (primary + secondary).
-    """
+# ---------------- PRETTY PRINT ----------------
+def pretty_print(result_dict):
+    print("\n" + "=" * 80)
+    print("EVIDENCE PLANNER RESULT")
+    print("=" * 80)
 
-    with open(input_path, "r") as f:
-        data = json.load(f)
+    for scenario, data in result_dict.items():
+        print(f"\nScenario: {scenario}")
 
-    evidence = data.get("evidence", {})
-
-    primary_evidence = evidence.get("primary_evidence", [])
-    secondary_rows = evidence.get("secondary_evidence", {}).get("rows", [])
-
-    unique_blocks = []
-    seen_ids = set()
-    seen_hashes = set()
-
-    # --------------------------------------------------
-    # PRIMARY evidence
-    # --------------------------------------------------
-    for group in primary_evidence:
-        for row in group.get("rows", []):
-            block_id = row.get("id")
-
-            if block_id is not None:
-                if block_id in seen_ids:
-                    continue
-                seen_ids.add(block_id)
-                unique_blocks.append(clean_block(row.copy()))
-            else:
-                row_hash = get_row_hash(row)
-                if row_hash in seen_hashes:
-                    continue
-                seen_hashes.add(row_hash)
-                unique_blocks.append(clean_block(row.copy()))
-
-    print(f"[DEBUG] Primary evidence processed")
-
-    # --------------------------------------------------
-    # SECONDARY evidence
-    # --------------------------------------------------
-    print(f"[DEBUG] Secondary evidence blocks: {len(secondary_rows)}")
-
-    for row in secondary_rows:
-        block_id = row.get("id")
-
-        if block_id is not None:
-            if block_id in seen_ids:
-                continue
-            seen_ids.add(block_id)
-            unique_blocks.append(clean_block(row.copy()))
+        if "blocks" in data:
+            blocks = data["blocks"]
+            print(f"   Total Blocks Returned: {len(blocks)}")
+            for i, block in enumerate(blocks, 1):
+                print("\n" + "-" * 60)
+                print(f" Block #{i}")
+                print("-" * 60)
+                print(json.dumps(block, indent=2))
         else:
-            row_hash = get_row_hash(row)
-            if row_hash in seen_hashes:
-                continue
-            seen_hashes.add(row_hash)
-            unique_blocks.append(clean_block(row.copy()))
+            for eb03, blocks in data.items():
+                if eb03 == "fts":
+                    continue
 
-    # --------------------------------------------------
-    # Final stats
-    # --------------------------------------------------
-    print(f"Distinct EB/PLAN blocks found: {len(unique_blocks)}")
+                print(f"\nEB03: {eb03}")
+                print(f"   Structured Blocks: {len(blocks)}")
 
-    # --------------------------------------------------
-    # Write final EB data
-    # --------------------------------------------------
-    with open(output_path, "w") as f:
-        json.dump(unique_blocks, f, indent=2, default=str)
+                for i, block in enumerate(blocks, 1):
+                    print("\n" + "-" * 60)
+                    print(f" Block #{i}")
+                    print("-" * 60)
+                    print(json.dumps(block, indent=2))
+
+            if "fts" in data:
+                fts_blocks = data["fts"]
+                print(f"\nScenario {scenario} | FTS Matching")
+                for i, block in enumerate(fts_blocks, 1):
+                    print("\n" + "-" * 60)
+                    print(f" FTS Block #{i}")
+                    print("-" * 60)
+                    print(json.dumps(block, indent=2))
+
+        print("\n" + "=" * 80)
+
+
+# ---------------- DUMP UNIQUE BLOCKS ----------------
+def dump_unique_eb_blocks(result_dict, path="output/eb_blocks.json"):
+    unique = {}
+
+    for scenario, data in result_dict.items():
+        if "blocks" in data:
+            for b in data["blocks"]:
+                unique[b["id"]] = b
+        else:
+            for key, blocks in data.items():
+                if key == "fts":
+                    for b in blocks:
+                        unique[b["id"]] = b
+                else:
+                    for b in blocks:
+                        unique[b["id"]] = b
+
+    with open(path, "w") as f:
+        json.dump(list(unique.values()), f, indent=2)
+
+    print(f"\nDumped {len(unique)} unique EB blocks to {path}")

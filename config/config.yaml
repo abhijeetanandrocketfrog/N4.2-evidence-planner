@@ -4,3 +4,7 @@ database:
   user: postgres
   password: dabsan-habxo5-Davjaq
   port: 5432
+
+paths:
+  dsl: core/evidence_dsl.json
+  fts_sql: sql/fts_query.sql
