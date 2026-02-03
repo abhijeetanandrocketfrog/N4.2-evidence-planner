@@ -4,44 +4,40 @@ from utils.helper import (
     parse_atomic_questions,
     pretty_print,
     dump_unique_eb_blocks,
+    expand_scenarios
 )
+import json
 import yaml
 
 
 def main():
-    member_id = "FAKE-1243781181_ALEX_ELIZABETH_BUTTERFISH"
-    scenarios = ["1.2"]
+    member_id = "FAKE-0034517234_ARIANNA_JACOB_WEEVER"
+    scenarios = ["1"]
 
     atomic_questions_input = {
     "Atomic_Questions": [
         {
             "eb_filters": [
-            "EB01: Deductible",
+            "EB01: Limitations",
             "EB02: Individual",
             "EB02: Individual and Children",
             "EB02: Individual and Spouse",
             "EB02: Individual Only",
-            "EB03: Audiology Exam",
-            "EB03: Consultation",
-            "EB03: Diagnostic Lab",
-            "EB03: Diagnostic Medical",
-            "EB03: Independent Medical Evaluation",
-            "EB03: Infertility",
-            "EB03: Invasive Procedures",
-            "EB03: Oncology",
-            "EB03: Pathology",
+            "EB03: Occupational Therapy",
             "EB03: Physical Therapy",
-            "EB03: Professional (Physician)",
-            "EB03: Pulmonary",
-            "EB03: Screening laboratory",
-            "EB03: Surgical Benefits - Professional (Physician)"
+            "EB03: Psychotherapy",
+            "EB03: Speech Therapy",
+            "EB06: Calendar Year",
+            "EB06: Contract",
+            "EB06: Service Year",
+            "EB06: Year to Date",
+            "EB06: Years"
             ],
             "extracted_terms": [
-            "deductible",
-            "my",
-            "pcp",
-            "specialist",
-            "genetic testing"
+            "total amount i would be responsible for covering all pt sessions",
+            "i",
+            "pt sessions",
+            "plan year"
             ]
         }
     ]
@@ -54,6 +50,8 @@ def main():
 
     with open("config/config.yaml") as f:
         config = yaml.safe_load(f)
+    with open(config["paths"]["dsl"]) as f:
+        dsl = json.load(f)
 
     engine = EvidenceEngine(
         conn,
@@ -61,6 +59,7 @@ def main():
         config["paths"]["fts_sql"]
     )
 
+    scenarios = expand_scenarios(scenarios, dsl)
     result = engine.run(
         member_id,
         scenarios,

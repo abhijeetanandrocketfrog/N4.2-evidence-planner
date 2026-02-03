@@ -27,7 +27,6 @@ class EvidenceEngine:
         self.extracted_terms = extracted_terms
 
         required_eb03s = self._compute_required_eb03s(scenarios, eb03_terms)
-
         eb_blocks = self._fetch_eb_blocks(member_id, required_eb03s)
 
         results = {}
@@ -38,9 +37,29 @@ class EvidenceEngine:
 
             results[scenario] = {}
 
+            print(f"\n================ Scenario {scenario} ================")
+
+            # ------------------------------------------------------
+            # PLAN ACTIVE CHECK — RUN ONCE PER SCENARIO
+            # ------------------------------------------------------
+            plan_status, plan_blocks = self._run_prior_check(
+                "plan_active_check", None, eb_blocks
+            )
+
+            print(f"[Prior Check: plan_active_check] -> {plan_status}")
+
+            # If plan is inactive / non-covered → no need to run EB03 logic
+            if plan_status in ["Inactive", "Non-Covered"]:
+                if scope == "plan":
+                    results[scenario]["blocks"] = plan_blocks
+                else:
+                    for eb03 in eb03_terms:
+                        results[scenario][eb03] = plan_blocks
+                continue
+
             # ---------------- PLAN LEVEL ----------------
             if scope == "plan":
-                print(f"\n--- Scenario {scenario} (Plan Level) ---")
+                print(f"\n----- Scenario {scenario} (Plan Level) -----")
                 blocks = self._execute_scenario(
                     scenario, None, eb_blocks, member_id
                 )
@@ -49,22 +68,19 @@ class EvidenceEngine:
             # ---------------- SERVICE LEVEL ----------------
             elif scope == "service":
                 for eb03 in eb03_terms:
-                    print(f"\n--- Scenario {scenario} | EB03: {eb03} ---")
+                    print(f"\n----- Scenario {scenario} | EB03: {eb03} -----")
+
                     blocks = self._execute_scenario(
                         scenario, eb03, eb_blocks, member_id
                     )
 
-                    if eb03 not in results[scenario]:
-                        results[scenario][eb03] = []
+                    results[scenario][eb03] = blocks
 
-                    results[scenario][eb03].extend(blocks)
-
-                # ✅ FTS runs ONCE per scenario (after all EB03 attempts)
+                # FTS runs once per scenario
                 fts_blocks = self._run_fts_for_scenario(member_id, scenario)
                 results[scenario]["fts"] = fts_blocks
 
         return results
-
 
 
     # =========================================================
@@ -167,6 +183,11 @@ class EvidenceEngine:
 
             # -------- PRIOR CHECKS --------
             if "prior_check" in step:
+
+                # ✅ Skip plan_active_check here (already done in run())
+                if step["prior_check"] == "plan_active_check":
+                    continue
+
                 status, blocks = self._run_prior_check(
                     step["prior_check"],
                     eb03,
@@ -200,7 +221,6 @@ class EvidenceEngine:
                     evidence.extend(fb_blocks)
                     return evidence
 
-
             # -------- RETRIEVE --------
             elif step.get("type") == "retrieve":
                 blocks = self._retrieve(step, eb03, eb_blocks, member_id)
@@ -216,7 +236,9 @@ class EvidenceEngine:
 
                     if fb.get("redirect"):
                         print(f"[Redirect] -> Scenario {fb['redirect']}")
-                        return self._execute_scenario(fb["redirect"], eb03, eb_blocks, member_id)
+                        return self._execute_scenario(
+                            fb["redirect"], eb03, eb_blocks, member_id
+                        )
 
                     if fb.get("type") == "retrieve":
                         fb_blocks = self._retrieve(fb, eb03, eb_blocks, member_id)
@@ -225,8 +247,6 @@ class EvidenceEngine:
                         evidence.extend(fb_blocks)
 
                         return evidence
-
-
 
         return evidence
 
@@ -340,7 +360,7 @@ class EvidenceEngine:
             cur.execute(self.fts_query, params)
             rows = cur.fetchall()
 
-        print(f"\n--- Scenario {scenario} | FTS Retrieve ---")
+        print(f"\n----- Scenario {scenario} | FTS Retrieve -----")
         print(f"[FTS Retrieve] Found {len(rows)} blocks")
 
         return [row[0] for row in rows]

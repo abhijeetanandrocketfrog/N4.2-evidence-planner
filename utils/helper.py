@@ -100,3 +100,25 @@ def dump_unique_eb_blocks(result_dict, path="output/eb_blocks.json"):
         json.dump(list(unique.values()), f, indent=2)
 
     print(f"\nDumped {len(unique)} unique EB blocks to {path}")
+
+
+def expand_scenarios(scenarios, dsl):
+    """
+    Expands parent scenarios like '1' into all its sub-scenarios
+    using the DSL definition.
+    """
+    expanded = set()
+
+    for sc in scenarios:
+        # If already sub-scenario (contains dot), keep as is
+        if "." in sc:
+            expanded.add(sc)
+            continue
+
+        # Expand parent scenario
+        prefix = sc + "."
+        for dsl_sc in dsl["scenarios"].keys():
+            if dsl_sc.startswith(prefix):
+                expanded.add(dsl_sc)
+
+    return sorted(expanded)
