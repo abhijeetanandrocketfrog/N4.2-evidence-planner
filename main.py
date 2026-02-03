@@ -11,8 +11,8 @@ import yaml
 
 
 def main():
-    member_id = "FAKE-0034517234_ARIANNA_JACOB_WEEVER"
-    scenarios = ["1"]
+    member_id = "FAKE-0380653612_KELLY_JACOB_TETRA"
+    scenarios = ["2.1"]
 
     atomic_questions_input = {
     "Atomic_Questions": [

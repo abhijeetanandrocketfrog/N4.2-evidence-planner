@@ -187,6 +187,12 @@
             "EB03": "Health Benefit Plan Coverage",
             "segments": ["DTP", "REF"]
           }
+        },
+        {
+          "type": "retrieve",
+          "table": "eb_blocks_v5",
+          "EB01": "Primary Care Provider",
+          "EB03": "any"
         }
       ]
     },

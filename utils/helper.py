@@ -80,26 +80,56 @@ def pretty_print(result_dict):
 
 
 # ---------------- DUMP UNIQUE BLOCKS ----------------
+# def dump_unique_eb_blocks(result_dict, path="output/eb_blocks.json"):
+#     unique = {}
+
+#     for scenario, data in result_dict.items():
+#         if "blocks" in data:
+#             for b in data["blocks"]:
+#                 unique[b["id"]] = b
+#         else:
+#             for key, blocks in data.items():
+#                 if key == "fts":
+#                     for b in blocks:
+#                         unique[b["id"]] = b
+#                 else:
+#                     for b in blocks:
+#                         unique[b["id"]] = b
+
+#     with open(path, "w") as f:
+#         json.dump(list(unique.values()), f, indent=2)
+
+#     print(f"\nDumped {len(unique)} unique EB blocks to {path}")
+
 def dump_unique_eb_blocks(result_dict, path="output/eb_blocks.json"):
+    import json
+
     unique = {}
 
+    def get_key(block):
+        # EB blocks → use id
+        if isinstance(block, dict) and "id" in block:
+            return f"eb_{block['id']}"
+        # HL / other blocks → hash by content
+        return "hl_" + json.dumps(block, sort_keys=True)
+
     for scenario, data in result_dict.items():
+
+        # ---------------- PLAN LEVEL ----------------
         if "blocks" in data:
             for b in data["blocks"]:
-                unique[b["id"]] = b
+                unique[get_key(b)] = b
+
+        # ---------------- SERVICE LEVEL ----------------
         else:
             for key, blocks in data.items():
-                if key == "fts":
-                    for b in blocks:
-                        unique[b["id"]] = b
-                else:
-                    for b in blocks:
-                        unique[b["id"]] = b
+                for b in blocks:
+                    unique[get_key(b)] = b
 
     with open(path, "w") as f:
         json.dump(list(unique.values()), f, indent=2)
 
-    print(f"\nDumped {len(unique)} unique EB blocks to {path}")
+    print(f"\nDumped {len(unique)} unique blocks to {path}")
 
 
 def expand_scenarios(scenarios, dsl):

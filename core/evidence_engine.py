@@ -86,23 +86,32 @@ class EvidenceEngine:
     # =========================================================
     # EB03 UNIVERSE
     # =========================================================
-    def _compute_required_eb03s(self, scenarios: List[str], eb03_terms: List[str]) -> Set[str]:
+    def _compute_required_eb03s(self, scenarios, eb03_terms):
         eb03s = set(eb03_terms)
 
-        plan_check = self.common_blocks.get("plan_active_check", {})
-        match = plan_check.get("match", {})
-        if "EB03" in match:
-            eb03s.add(match["EB03"])
+        fetch_all = False
 
         for sc in scenarios:
             for step in self.scenarios[sc]["flow"]:
+
+                # detect EB03:any
+                if step.get("EB03") == "any":
+                    fetch_all = True
+
+                # add retrieve EB03
                 if step.get("type") == "retrieve":
-                    if step.get("EB03") not in ["input", None]:
+                    if step.get("EB03") not in ["input", None, "any"]:
                         eb03s.add(step["EB03"])
 
-                    fb = step.get("fallback", {})
-                    if fb.get("EB03") not in ["input", None]:
-                        eb03s.add(fb.get("EB03"))
+                # add fallback EB03
+                fb = step.get("fallback", {})
+                if fb.get("EB03") == "any":
+                    fetch_all = True
+                elif fb.get("EB03") not in ["input", None]:
+                    eb03s.add(fb["EB03"])
+
+        if fetch_all:
+            return None
 
         return eb03s
 
@@ -184,7 +193,7 @@ class EvidenceEngine:
             # -------- PRIOR CHECKS --------
             if "prior_check" in step:
 
-                # ✅ Skip plan_active_check here (already done in run())
+                # Skip plan_active_check here (already done in run())
                 if step["prior_check"] == "plan_active_check":
                     continue
 
@@ -204,22 +213,16 @@ class EvidenceEngine:
             elif step.get("type") == "hl_lookup":
                 found, missing = self._hl_lookup(member_id, step.get("segments", []))
 
-                # Add whatever HL found
                 if found:
                     evidence.append(found)
 
-                # If nothing missing → done
-                if not missing:
-                    print("[HL Complete] All segments found")
-                    return evidence
-
-                print("[HL Partial] Missing segments → triggering fallback")
-
-                if "fallback" in step:
+                # Only run fallback if something is missing
+                if missing and "fallback" in step:
+                    print("[HL Partial] Missing segments → triggering fallback")
                     fb = step["fallback"]
                     fb_blocks = self._retrieve(fb, eb03, eb_blocks, member_id)
                     evidence.extend(fb_blocks)
-                    return evidence
+
 
             # -------- RETRIEVE --------
             elif step.get("type") == "retrieve":
@@ -275,8 +278,9 @@ class EvidenceEngine:
 
         structured = []
         for block in eb_blocks:
-            if block.get("EB03", "").strip() != target_eb03.strip():
-                continue
+            if target_eb03 != "any":
+                if block.get("EB03", "").strip() != target_eb03.strip():
+                    continue
 
             if target_eb01 and block.get("EB01") != target_eb01:
                 continue
@@ -290,23 +294,32 @@ class EvidenceEngine:
 
 
     # =========================================================
-    # OPTIMIZED FETCH
+    # FETCH EB Blocks
     # =========================================================
-    def _fetch_eb_blocks(self, member_id: str, eb03s: Set[str]):
-        query = textwrap.dedent("""
-            SELECT data
-            FROM eb_blocks_v5
-            WHERE member_id = %s
-            AND data->>'EB03' = ANY(%s);
-        """)
+    def _fetch_eb_blocks(self, member_id: str, eb03s: Set[str] | None):
+        if eb03s is None:
+            query = textwrap.dedent("""
+                SELECT data
+                FROM eb_blocks_v5
+                WHERE member_id = %s;
+            """)
+            params = (member_id,)
+        else:
+            query = textwrap.dedent("""
+                SELECT data
+                FROM eb_blocks_v5
+                WHERE member_id = %s
+                AND data->>'EB03' = ANY(%s);
+            """)
+            params = (member_id, list(eb03s))
 
         with self.conn.cursor() as cur:
-            self._log_sql(cur, query, (member_id, list(eb03s)))
-            cur.execute(query, (member_id, list(eb03s)))
+            self._log_sql(cur, query, params)
+            cur.execute(query, params)
             rows = cur.fetchall()
 
-        print(f"[DB Fetch] Retrieved {len(rows)} EB blocks")
         return [row[0] for row in rows]
+
 
     # =========================================================
     # HL 3/4 Lookup
