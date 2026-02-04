@@ -11,33 +11,38 @@ import yaml
 
 
 def main():
-    member_id = "FAKE-0380653612_KELLY_JACOB_TETRA"
-    scenarios = ["2.1"]
+    member_id = "FAKE-0605752378_SARA_HENRY_CUSK"
+    scenarios = ["1.2", "3.1"]
 
     atomic_questions_input = {
     "Atomic_Questions": [
         {
             "eb_filters": [
-            "EB01: Limitations",
+            "EB01: Deductible",
             "EB02: Individual",
             "EB02: Individual and Children",
             "EB02: Individual and Spouse",
             "EB02: Individual Only",
-            "EB03: Occupational Therapy",
-            "EB03: Physical Therapy",
-            "EB03: Psychotherapy",
-            "EB03: Speech Therapy",
-            "EB06: Calendar Year",
-            "EB06: Contract",
-            "EB06: Service Year",
-            "EB06: Year to Date",
-            "EB06: Years"
+            "EB03: Consultation",
+            "EB03: Diagnostic Lab",
+            "EB03: Gastrointestinal",
+            "EB03: Independent Medical Evaluation",
+            "EB03: Medical Care",
+            "EB03: Pathology",
+            "EB03: Professional (Physician)",
+            "EB03: Professional (Physician) Visit - Home",
+            "EB03: Routine Physical",
+            "EB03: Screening laboratory",
+            "EB03: Surgical Benefits - Professional (Physician)",
+            "EB03: Urgent Care",
+            "EB03: Vision (Optometry)"
             ],
             "extracted_terms": [
-            "total amount i would be responsible for covering all pt sessions",
-            "i",
-            "pt sessions",
-            "plan year"
+            "deductible",
+            "my",
+            "doctor",
+            "quick consultation",
+            "gastrointestinal checkup"
             ]
         }
     ]

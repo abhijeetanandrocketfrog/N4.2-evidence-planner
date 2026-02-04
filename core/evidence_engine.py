@@ -94,16 +94,31 @@ class EvidenceEngine:
         for sc in scenarios:
             for step in self.scenarios[sc]["flow"]:
 
-                # detect EB03:any
-                if step.get("EB03") == "any":
-                    fetch_all = True
+                # ----------------------------
+                # PRIOR CHECK EB03 NEEDS
+                # ----------------------------
+                if "prior_check" in step:
+                    check_name = step["prior_check"]
+                    check_def = self.common_blocks.get(check_name, {})
 
-                # add retrieve EB03
+                    if check_def.get("check") == "plan_status":
+                        eb03s.add(check_def["match"]["EB03"])
+
+                    if check_def.get("check") == "service_status":
+                        eb03s.update(eb03_terms)
+
+                # ----------------------------
+                # retrieve EB03
+                # ----------------------------
                 if step.get("type") == "retrieve":
-                    if step.get("EB03") not in ["input", None, "any"]:
+                    if step.get("EB03") == "any":
+                        fetch_all = True
+                    elif step.get("EB03") not in ["input", None]:
                         eb03s.add(step["EB03"])
 
-                # add fallback EB03
+                # ----------------------------
+                # fallback EB03
+                # ----------------------------
                 fb = step.get("fallback", {})
                 if fb.get("EB03") == "any":
                     fetch_all = True
@@ -114,6 +129,7 @@ class EvidenceEngine:
             return None
 
         return eb03s
+
 
     # =========================================================
     # EB01 UNIVERSE

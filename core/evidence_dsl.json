@@ -213,6 +213,21 @@
           }
         }
       ]
+    },
+
+    "3.1": {
+      "description": "Service Authorization",
+      "scope": "service",
+      "flow": [
+        { "prior_check": "plan_active_check" },
+        { "prior_check": "service_active_check" },
+        {
+          "type": "retrieve",
+          "EB03": "input",
+          "segments": ["EB11"]
+        }
+      ]
     }
+
   }
 }
