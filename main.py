@@ -11,8 +11,8 @@ import yaml
 
 
 def main():
-    member_id = "FAKE-0605752378_SARA_HENRY_CUSK"
-    scenarios = ["1.2", "3.1"]
+    member_id = "FAKE-0595433777_KRIS_OLIVIA_AYU"
+    scenarios = ["2.2", "3.1"]
 
     atomic_questions_input = {
     "Atomic_Questions": [
@@ -23,26 +23,11 @@ def main():
             "EB02: Individual and Children",
             "EB02: Individual and Spouse",
             "EB02: Individual Only",
-            "EB03: Consultation",
-            "EB03: Diagnostic Lab",
-            "EB03: Gastrointestinal",
-            "EB03: Independent Medical Evaluation",
-            "EB03: Medical Care",
-            "EB03: Pathology",
-            "EB03: Professional (Physician)",
-            "EB03: Professional (Physician) Visit - Home",
-            "EB03: Routine Physical",
-            "EB03: Screening laboratory",
-            "EB03: Surgical Benefits - Professional (Physician)",
-            "EB03: Urgent Care",
-            "EB03: Vision (Optometry)"
+            "EB03: Hospital",
+            "EB03: Hospital - Outpatient",
+            "EB03: Hospital - Inpatient",
             ],
             "extracted_terms": [
-            "deductible",
-            "my",
-            "doctor",
-            "quick consultation",
-            "gastrointestinal checkup"
             ]
         }
     ]

@@ -1,4 +1,56 @@
 {
+  "meta": {
+    
+    "name": "Eligibility Evidence DSL",
+    "version": "1.0",
+
+    "purpose": "Declarative definition of eligibility reasoning rules over EB blocks and HL segments extracted from a 271 response.",
+
+    "dsl_structure": {
+      "common_blocks": "Reusable rule blocks referenced by scenarios, primarily used for status checks.",
+      "scenarios": "Independent eligibility questions defined as ordered step flows.",
+      "scope": {
+        "plan": "Scenario operates at plan level without any service (EB03) level iteration.",
+        "service": "Scenario operates per service (EB03) input term."
+      },
+      "flow": "Ordered list of reasoning steps executed sequentially inside a scenario; new steps can be added by inserting another entry in the flow.",
+      "fallback_concept": "Alternate action when a step yields no evidence; can broaden retrieval scope or redirect to another scenario."
+    },
+
+    "current_scenarios": {
+      "1.x": "Financial responsibilities (Copay, Deductible, Out-of-Pocket Maximum, Coinsurance, Limitations)",
+      "2.x": "Coverage information at plan and service levels",
+      "3.x": "Pre-Service Requirements"
+    },
+    
+    "step_types": {
+      "prior_check": "References a rule from common_blocks to determine status using EB01/EB03 logic.",
+      "retrieve": "Fetches EB blocks filtered by EB01, EB03 and optional segment presence.",
+      "hl_lookup": "Fetches HL-level segments (e.g. DTP, REF) from patient space data.",
+      "fallback": "Alternative step executed when primary retrieve or lookup yields no result.",
+      "redirect": "Transfers control to another scenario."
+    },
+
+    "filters_supported": {
+      "EB01": "Exact EB01 value match",
+      "EB03": "Exact EB03 match, 'input', or 'any'",
+      "segments": "Presence of segments such as DTP, REF, EB11"
+    },
+
+    "data_sources": {
+      "eb_blocks_v5": "Structured EB segments parsed from 271",
+      "patient_space_v01": "HL-level data parsed from 271"
+    },
+
+    "design_rules": [
+      "All eligibility logic must be expressed through scenario steps.",
+      "Status determination logic must be defined only inside common_blocks.",
+      "Scenarios must represent a single atomic eligibility question.",
+      "Fallback and redirection logic must be explicitly defined inside scenarios.",
+      "Engine must not contain scenario-specific conditions."
+    ]
+  },
+
   "common_blocks": {
 
     "plan_active_check": {
