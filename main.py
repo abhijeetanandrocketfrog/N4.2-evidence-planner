@@ -11,23 +11,36 @@ import yaml
 
 
 def main():
-    member_id = "FAKE-0595433777_KRIS_OLIVIA_AYU"
-    scenarios = ["2.2", "3.1"]
+    member_id = "FAKE-2137395207_KELLY_ALICE_BONYTAIL"
+    scenarios = ["2.2"]
 
     atomic_questions_input = {
     "Atomic_Questions": [
         {
             "eb_filters": [
-            "EB01: Deductible",
+            "EB01: Active - Full Risk Capitation",
+            "EB01: Active - Pending Investigation",
+            "EB01: Active - Services Capitated",
+            "EB01: Active - Services Capitated to Primary Care Physician",
+            "EB01: Active Coverage",
+            "EB01: Inactive",
+            "EB01: Inactive - Pending Eligibility Update",
+            "EB01: Inactive - Pending Investigation",
+            "EB01: Non-Covered",
             "EB02: Individual",
             "EB02: Individual and Children",
             "EB02: Individual and Spouse",
             "EB02: Individual Only",
-            "EB03: Hospital",
-            "EB03: Hospital - Outpatient",
-            "EB03: Hospital - Inpatient",
+            "EB03: Brand Name Prescription Drug",
+            "EB03: Free Standing Prescription Drug",
+            "EB03: Generic Prescription Drug",
+            "EB03: Health Benefit Plan Coverage",
+            "EB03: Pharmacy"
             ],
             "extracted_terms": [
+            "covered",
+            "my",
+            "prescription"
             ]
         }
     ]

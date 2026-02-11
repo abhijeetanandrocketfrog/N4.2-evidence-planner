@@ -255,10 +255,14 @@ class EvidenceEngine:
 
                     if fb.get("redirect"):
                         print(f"[Redirect] -> Scenario {fb['redirect']}")
-                        return self._execute_scenario(
+                        # return self._execute_scenario(
+                        #     fb["redirect"], eb03, eb_blocks, member_id
+                        # )
+                        redirect_evidence = self._execute_scenario(
                             fb["redirect"], eb03, eb_blocks, member_id
                         )
-
+                        evidence.extend(redirect_evidence)
+                        return evidence
                     if fb.get("type") == "retrieve":
                         fb_blocks = self._retrieve(fb, eb03, eb_blocks, member_id)
                         print(f"[Fallback Structured Retrieve] Found {len(fb_blocks)} blocks")
